@@ -41,6 +41,10 @@ class SamlFactoryTest extends TestCase
                 'user_factory' => 'my_user_factory',
                 'token_factory' => 'my_token_factory',
                 'persist_user' => true,
+                'idp_mapping' =>[
+                    '/my_login/example' => 'example',
+                ],
+
             ],
             [
                 'username_attribute' => 'uid',
@@ -49,11 +53,19 @@ class SamlFactoryTest extends TestCase
                 'user_factory' => 'my_user_factory',
                 'token_factory' => 'my_token_factory',
                 'persist_user' => true,
+                'idp_mapping' =>[
+                    '/my_login/example' => 'example',
+                ],
+
             ]
         ];
 
         $tests[] = [
-            [],
+            [
+                'idp_mapping' =>[
+                    '/saml/login/example' => 'example',
+                ],
+            ],
             [
                 'username_attribute' => null,
                 'login_path' => 'saml_login',
@@ -61,7 +73,10 @@ class SamlFactoryTest extends TestCase
                 'user_factory' => null,
                 'token_factory' => null,
                 'persist_user' => false,
-            ]
+                'idp_mapping' =>[
+                    '/saml/login/example' => 'example',
+                ],
+            ],
         ];
 
         return $tests;
@@ -78,6 +93,9 @@ class SamlFactoryTest extends TestCase
             'username_attribute' => null,
             'login_path' => 'saml_login',
             'check_path' => 'saml_acs',
+            'idp_mapping' => [
+                '/saml/login/example' => 'example',
+            ],
         ];
         $node = $nodeDefinition->getNode();
         $normalizedConfig = $node->normalize($config);

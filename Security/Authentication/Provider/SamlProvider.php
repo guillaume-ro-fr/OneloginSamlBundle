@@ -10,6 +10,7 @@ use Symfony\Component\Security\Core\Authentication\Provider\AuthenticationProvid
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
 use Symfony\Component\Security\Core\Exception\AuthenticationException;
 use Symfony\Component\Security\Core\Exception\UsernameNotFoundException;
+use Symfony\Component\Security\Core\User\UserInterface;
 use Symfony\Component\Security\Core\User\UserProviderInterface;
 
 /**
@@ -31,22 +32,22 @@ class SamlProvider implements AuthenticationProviderInterface
         ), $options);
     }
 
-    public function setUserFactory(SamlUserFactoryInterface $userFactory)
+    public function setUserFactory(SamlUserFactoryInterface $userFactory): void
     {
         $this->userFactory = $userFactory;
     }
 
-    public function setTokenFactory(SamlTokenFactoryInterface $tokenFactory)
+    public function setTokenFactory(SamlTokenFactoryInterface $tokenFactory): void
     {
         $this->tokenFactory = $tokenFactory;
     }
 
-    public function setEntityManager($entityManager)
+    public function setEntityManager($entityManager): void
     {
         $this->entityManager = $entityManager;
     }
 
-    public function authenticate(TokenInterface $token)
+    public function authenticate(TokenInterface $token): SamlTokenInterface
     {
         $user = $this->retrieveUser($token);
 
@@ -64,12 +65,12 @@ class SamlProvider implements AuthenticationProviderInterface
         throw new AuthenticationException('The authentication failed.');
     }
 
-    public function supports(TokenInterface $token)
+    public function supports(TokenInterface $token): bool
     {
         return $token instanceof SamlTokenInterface;
     }
 
-    protected function retrieveUser($token)
+    protected function retrieveUser($token): UserInterface
     {
         try {
             return $this->userProvider->loadUserByUsername($token->getUsername());
@@ -82,7 +83,7 @@ class SamlProvider implements AuthenticationProviderInterface
         }
     }
 
-    protected function generateUser($token)
+    protected function generateUser($token): UserInterface
     {
         $user = $this->userFactory->createUser($token);
 

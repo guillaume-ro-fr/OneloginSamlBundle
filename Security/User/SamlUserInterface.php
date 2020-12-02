@@ -11,5 +11,5 @@ interface SamlUserInterface extends UserInterface
      *
      * @param array $attributes
      */
-    public function setSamlAttributes(array $attributes);
+    public function setSamlAttributes(array $attributes): void;
 }

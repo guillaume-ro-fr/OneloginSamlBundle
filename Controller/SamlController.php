@@ -9,14 +9,7 @@ use Symfony\Component\HttpFoundation\Request;
 
 class SamlController extends AbstractController
 {
-    protected $samlAuth;
-
-    public function __construct(\OneLogin\Saml2\Auth $samlAuth)
-    {
-        $this->samlAuth = $samlAuth;
-    }
-
-    public function loginAction(Request $request)
+    public function loginAction(Request $request, string $idp): void
     {
         $authErrorKey = Security::AUTHENTICATION_ERROR;
         $session = $targetPath = null;
@@ -39,12 +32,13 @@ class SamlController extends AbstractController
             throw new \RuntimeException($error->getMessage());
         }
 
-        $this->samlAuth->login($targetPath);
+        $this->get('onelogin_auth.' . $idp)->login($targetPath);
     }
 
-    public function metadataAction()
+    public function metadataAction(string $idp): Response
     {
-        $metadata = $this->samlAuth->getSettings()->getSPMetadata();
+        $auth = $this->get('onelogin_auth.' . $idp);
+        $metadata = $auth->getSettings()->getSPMetadata();
 
         $response = new Response($metadata);
         $response->headers->set('Content-Type', 'xml');
@@ -52,12 +46,12 @@ class SamlController extends AbstractController
         return $response;
     }
 
-    public function assertionConsumerServiceAction()
+    public function assertionConsumerServiceAction(): void
     {
         throw new \RuntimeException('You must configure the check path to be handled by the firewall.');
     }
 
-    public function singleLogoutServiceAction()
+    public function singleLogoutServiceAction(): void
     {
         throw new \RuntimeException('You must activate the logout in your security firewall configuration.');
     }

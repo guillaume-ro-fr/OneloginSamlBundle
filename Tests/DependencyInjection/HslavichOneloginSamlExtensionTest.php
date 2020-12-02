@@ -18,16 +18,16 @@ class HslavichOneloginSamlExtensionTest extends TestCase
     {
         $settings = $this->createContainerFromFile('full')->getParameter('hslavich_onelogin_saml.settings');
 
-        self::assertEquals('http://id.example.com/saml2/idp/metadata.php', $settings['idp']['entityId']);
-        self::assertEquals('http://id.example.com/saml2/idp/SSOService.php', $settings['idp']['singleSignOnService']['url']);
-        self::assertEquals('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect', $settings['idp']['singleSignOnService']['binding']);
-        self::assertEquals('http://id.example.com/saml2/idp/SingleLogoutService.php', $settings['idp']['singleLogoutService']['url']);
-        self::assertEquals('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect', $settings['idp']['singleLogoutService']['binding']);
-        self::assertEquals('idp_x509certdata', $settings['idp']['x509cert']);
-        self::assertEquals('43:51:43:a1:b5:fc:8b:b7:0a:3a:a9:b1:0f:66:73:a8', $settings['idp']['certFingerprint']);
-        self::assertEquals('sha1', $settings['idp']['certFingerprintAlgorithm']);
-        self::assertEquals(['<cert1-string>'], $settings['idp']['x509certMulti']['signing']);
-        self::assertEquals(['<cert2-string>'], $settings['idp']['x509certMulti']['encryption']);
+        self::assertEquals('http://id.example.com/saml2/idp/metadata.php', $settings['idps']['example']['entityId']);
+        self::assertEquals('http://id.example.com/saml2/idp/SSOService.php', $settings['idps']['example']['singleSignOnService']['url']);
+        self::assertEquals('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect', $settings['idps']['example']['singleSignOnService']['binding']);
+        self::assertEquals('http://id.example.com/saml2/idp/SingleLogoutService.php', $settings['idps']['example']['singleLogoutService']['url']);
+        self::assertEquals('urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect', $settings['idps']['example']['singleLogoutService']['binding']);
+        self::assertEquals('idp_x509certdata', $settings['idps']['example']['x509cert']);
+        self::assertEquals('43:51:43:a1:b5:fc:8b:b7:0a:3a:a9:b1:0f:66:73:a8', $settings['idps']['example']['certFingerprint']);
+        self::assertEquals('sha1', $settings['idps']['example']['certFingerprintAlgorithm']);
+        self::assertEquals(['<cert1-string>'], $settings['idps']['example']['x509certMulti']['signing']);
+        self::assertEquals(['<cert2-string>'], $settings['idps']['example']['x509certMulti']['encryption']);
     }
 
     public function testLoadSpSettings(): void

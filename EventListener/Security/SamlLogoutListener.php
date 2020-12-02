@@ -4,16 +4,24 @@ declare(strict_types=1);
 
 namespace Hslavich\OneloginSamlBundle\EventListener\Security;
 
-use Hslavich\OneloginSamlBundle\Security\Http\Authenticator\Token\SamlTokenInterface;
+use Hslavich\OneloginSamlBundle\Security\Authentication\Token\SamlTokenInterface;
+use OneLogin\Saml2\Auth;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\Security\Http\Event\LogoutEvent;
 
 class SamlLogoutListener
 {
-    protected $samlAuth;
+    /**
+     * @var ContainerInterface
+     */
+    private $container;
 
-    public function __construct(\OneLogin\Saml2\Auth $samlAuth)
+    /**
+     * Sets the container.
+     */
+    public function setContainer(ContainerInterface $container = null): void
     {
-        $this->samlAuth = $samlAuth;
+        $this->container = $container;
     }
 
     public function __invoke(LogoutEvent $event)
@@ -23,12 +31,15 @@ class SamlLogoutListener
             return;
         }
 
+        /** @var Auth $samlAuth */
+        $samlAuth = $this->container->get('onelogin_auth.'.$token->getAttribute('idp'));
         try {
-            $this->samlAuth->processSLO();
+            $samlAuth->processSLO();
+
         } catch (\OneLogin\Saml2\Error $e) {
-            if (!empty($this->samlAuth->getSLOurl())) {
+            if (!empty($samlAuth->getSLOurl())) {
                 $sessionIndex = $token->hasAttribute('sessionIndex') ? $token->getAttribute('sessionIndex') : null;
-                $this->samlAuth->logout(null, array(), $token->getUsername(), $sessionIndex);
+                $samlAuth->logout(null, [], $token->getUsername(), $sessionIndex);
             }
         }
     }

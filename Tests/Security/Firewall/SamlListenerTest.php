@@ -6,6 +6,7 @@ use Hslavich\OneloginSamlBundle\Security\Authentication\Token\SamlToken;
 use Hslavich\OneloginSamlBundle\Security\Firewall\SamlListener;
 use OneLogin\Saml2\Auth;
 use PHPUnit\Framework\TestCase;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Event\RequestEvent;
 use Symfony\Component\HttpKernel\HttpKernelInterface;
@@ -20,6 +21,7 @@ class SamlListenerTest extends TestCase
     private $authenticationManager;
     private $event;
     private $sessionStrategy;
+    private $httpUtils;
     private $tokenStorage;
 
     public function testHandleValidAuthenticationWithAttribute(): void
@@ -31,53 +33,68 @@ class SamlListenerTest extends TestCase
 
         $onelogin = $this->getMockBuilder(Auth::class)
             ->disableOriginalConstructor()
-            ->getMock()
-        ;
+            ->getMock();
         $onelogin
             ->expects(self::once())
-            ->method('processResponse')
-        ;
+            ->method('processResponse');
         $onelogin
             ->expects(self::once())
             ->method('getAttributes')
-            ->willReturn($attributes)
-        ;
+            ->willReturn($attributes);
         $onelogin
             ->expects(self::once())
             ->method('getSessionIndex')
-            ->willReturn($sessionIndex)
-        ;
-        $listener->setOneLoginAuth($onelogin);
+            ->willReturn($sessionIndex);
+        $container = $this->createMock(ContainerInterface::class);
+        $container
+            ->expects(self::once())
+            ->method('get')
+            ->with(self::equalTo('onelogin_auth.example'))
+            ->willReturn($onelogin);
+
+        $listener->setContainer($container);
+
+        $listener->setAuthMap(['/login/saml/example' => 'example']);
 
         $this->authenticationManager
             ->expects(self::once())
             ->method('authenticate')
-            ->with(self::callback(static function (SamlToken $token) use ($sessionIndex) {
-                return $sessionIndex === $token->getAttributes()['sessionIndex']
-                    && 'username_uid' === $token->getUsername();
-            }))
-        ;
+            ->with(
+                self::callback(
+                    static function (SamlToken $token) use ($sessionIndex) {
+                        return $sessionIndex === $token->getAttributes()['sessionIndex']
+                            && 'username_uid' === $token->getUsername();
+                    }
+                )
+            );
 
         $listener($this->event);
     }
 
     public function testHandleValidAuthenticationWithEmptyOptions(): void
     {
-        $listener = $this->getListener();
+        $listener = $this->getListener([]);
 
         $onelogin = $this->getMockBuilder(Auth::class)->disableOriginalConstructor()->getMock();
         $onelogin->expects(self::once())->method('processResponse');
         $onelogin
             ->expects(self::once())
             ->method('getAttributes')
-            ->willReturn([])
-        ;
+            ->willReturn([]);
         $onelogin
             ->expects(self::once())
             ->method('getNameId')
-            ->willReturn('username')
-        ;
-        $listener->setOneLoginAuth($onelogin);
+            ->willReturn('username');
+        $container = $this->createMock(ContainerInterface::class);
+        $container
+            ->expects(self::once())
+            ->method('get')
+            ->with(self::equalTo('onelogin_auth.example'))
+            ->willReturn($onelogin);
+
+        $listener->setContainer($container);
+
+        $listener->setAuthMap(['/login/saml/example' => 'example']);
 
         $listener($this->event);
     }
@@ -103,28 +120,28 @@ class SamlListenerTest extends TestCase
         $request = $this->createMock(Request::class);
         $request
             ->method('hasSession')
-            ->willReturn(true)
-        ;
+            ->willReturn(true);
         $request
             ->method('hasPreviousSession')
-            ->willReturn(true)
-        ;
+            ->willReturn(true);
+        $request
+            ->expects(self::once())
+            ->method('get')
+            ->with(self::equalTo('RelayState'))
+            ->willReturn('/login/saml/example');
 
         $this->event = $this->createMock(RequestEvent::class);
         $this->event
             ->method('getRequest')
-            ->willReturn($request)
-        ;
+            ->willReturn($request);
         $this->event
             ->method('getKernel')
-            ->willReturn($this->createMock(HttpKernelInterface::class))
-        ;
+            ->willReturn($this->createMock(HttpKernelInterface::class));
 
         $this->sessionStrategy = $this->createMock(SessionAuthenticationStrategyInterface::class);
         $this->httpUtils = $this->createMock(HttpUtils::class);
         $this->httpUtils->method('checkRequestPath')
-            ->willReturn(true)
-        ;
+            ->willReturn(true);
 
         $reflection = new \ReflectionClass(SamlListener::class);
         $params = $reflection->getConstructor()->getParameters();
@@ -138,5 +155,6 @@ class SamlListenerTest extends TestCase
         $this->event = null;
         $this->sessionStrategy = null;
         $this->tokenStorage = null;
+        $this->httpUtils = null;
     }
 }

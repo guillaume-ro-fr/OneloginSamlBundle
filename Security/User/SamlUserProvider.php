@@ -16,17 +16,17 @@ class SamlUserProvider implements UserProviderInterface
         $this->defaultRoles = $defaultRoles;
     }
 
-    public function loadUserByUsername($username)
+    public function loadUserByUsername($username): UserInterface
     {
         return new $this->userClass($username, $this->defaultRoles);
     }
 
-    public function refreshUser(UserInterface $user)
+    public function refreshUser(UserInterface $user): UserInterface
     {
         return $user;
     }
 
-    public function supportsClass($class)
+    public function supportsClass($class): bool
     {
         return $this->userClass === $class || is_subclass_of($class, $this->userClass);
     }

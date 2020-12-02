@@ -3,6 +3,9 @@
 namespace Hslavich\OneloginSamlBundle\Security\Firewall;
 
 use Hslavich\OneloginSamlBundle\Security\Authentication\Token\SamlToken;
+use OneLogin\Saml2\Auth;
+use Symfony\Component\DependencyInjection\ContainerAwareInterface;
+use Symfony\Component\DependencyInjection\ContainerInterface;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Security\Core\Authentication\Token\TokenInterface;
@@ -12,19 +15,34 @@ use Symfony\Component\Security\Http\Firewall\AbstractAuthenticationListener;
 /**
  * @deprecated since 2.1
  */
-class SamlListener extends AbstractAuthenticationListener
+class SamlListener extends AbstractAuthenticationListener implements ContainerAwareInterface
 {
     /**
-     * @var \OneLogin\Saml2\Auth
+     * @var array
      */
-    protected $oneLoginAuth;
+    protected $authMap = [];
 
     /**
-     * @param \OneLogin\Saml2\Auth $oneLoginAuth
+     * @var ContainerInterface
      */
-    public function setOneLoginAuth(\OneLogin\Saml2\Auth $oneLoginAuth)
+    protected $container;
+    
+    /**
+     * @param array $authMap
+     */
+    public function setAuthMap(array $authMap): void
     {
-        $this->oneLoginAuth = $oneLoginAuth;
+        $this->authMap = $authMap;
+    }
+    
+    /**
+     * Sets the container.
+     *
+     * @param ContainerInterface $container
+     */
+    public function setContainer(ContainerInterface $container = null): void
+    {
+        $this->container = $container;
     }
 
     /**
@@ -38,20 +56,31 @@ class SamlListener extends AbstractAuthenticationListener
      */
     protected function attemptAuthentication(Request $request)
     {
-        $this->oneLoginAuth->processResponse();
-        if ($this->oneLoginAuth->getErrors()) {
+        if (($relayState = $request->get('RelayState', null)) === null) {
+            throw new \Exception("Missing RelayState to determine IDP");
+        }
+        $path = parse_url($relayState, PHP_URL_PATH);
+        if (!isset($this->authMap[$path])) {
+            throw new \Exception(sprintf("Unknown IDP '%s'", $path));
+        }
+        $idp = $this->authMap[$path];
+        /** @var Auth $oneLoginAuth */
+        $oneLoginAuth = $this->container->get('onelogin_auth.' . $idp);
+
+        $oneLoginAuth->processResponse();
+        if ($oneLoginAuth->getErrors()) {
             if (null !== $this->logger) {
-                $this->logger->error($this->oneLoginAuth->getLastErrorReason());
+                $this->logger->error($oneLoginAuth->getLastErrorReason());
             }
-            throw new AuthenticationException($this->oneLoginAuth->getLastErrorReason());
+            throw new AuthenticationException($oneLoginAuth->getLastErrorReason());
         }
 
         if (isset($this->options['use_attribute_friendly_name']) && $this->options['use_attribute_friendly_name']) {
-            $attributes = $this->oneLoginAuth->getAttributesWithFriendlyName();
+            $attributes = $oneLoginAuth->getAttributesWithFriendlyName();
         } else {
-            $attributes = $this->oneLoginAuth->getAttributes();
+            $attributes = $oneLoginAuth->getAttributes();
         }
-        $attributes['sessionIndex'] = $this->oneLoginAuth->getSessionIndex();
+        $attributes['sessionIndex'] = $oneLoginAuth->getSessionIndex();
         $token = new SamlToken();
         $token->setAttributes($attributes);
 
@@ -65,7 +94,7 @@ class SamlListener extends AbstractAuthenticationListener
 
             $username = $attributes[$this->options['username_attribute']][0];
         } else {
-            $username = $this->oneLoginAuth->getNameId();
+            $username = $oneLoginAuth->getNameId();
         }
         $token->setUser($username);
 

@@ -16,5 +16,5 @@ interface SamlTokenFactoryInterface
      *
      * @return SamlTokenInterface
      */
-    public function createToken($user, array $attributes, array $roles);
+    public function createToken($user, array $attributes, array $roles): SamlTokenInterface;
 }

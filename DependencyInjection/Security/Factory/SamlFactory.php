@@ -64,6 +64,8 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
                 $builder->scalarNode($name)->defaultValue($default);
             }
         }
+        
+        $this->addResourceOwnersConfiguration($node);
     }
 
     final public function addOption(string $name, $default = null): void
@@ -218,5 +220,19 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
     protected function getFailureHandlerId(string $id): string
     {
         return 'security.authentication.failure_handler.'.$id.'.'.str_replace('-', '_', $this->getKey());
+    }
+    
+    private function addResourceOwnersConfiguration(NodeDefinition $node): void
+    {
+        $builder = $node->children();
+        $builder
+        ->arrayNode('idp_mapping')
+        ->isRequired()
+        ->useAttributeAsKey('name')
+        ->prototype('scalar')
+        ->end()
+        ->end()
+        ->end()
+        ;
     }
 }
