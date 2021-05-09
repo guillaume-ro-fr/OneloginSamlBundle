@@ -54,17 +54,20 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
             ->scalarNode('provider')->end()
             ->booleanNode('remember_me')->defaultTrue()->end()
             ->scalarNode('success_handler')->end()
-            ->scalarNode('failure_handler')->end()
-        ;
+            ->scalarNode('failure_handler')->end();
 
-        foreach (array_merge($this->options, $this->defaultSuccessHandlerOptions, $this->defaultFailureHandlerOptions) as $name => $default) {
+        foreach (array_merge(
+                     $this->options,
+                     $this->defaultSuccessHandlerOptions,
+                     $this->defaultFailureHandlerOptions
+                 ) as $name => $default) {
             if (\is_bool($default)) {
                 $builder->booleanNode($name)->defaultValue($default);
             } else {
                 $builder->scalarNode($name)->defaultValue($default);
             }
         }
-        
+
         $this->addResourceOwnersConfiguration($node);
     }
 
@@ -73,9 +76,18 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
         $this->options[$name] = $default;
     }
 
-    public function create(ContainerBuilder $container, string $id, array $config, string $userProviderId, ?string $defaultEntryPointId): array
-    {
-        trigger_deprecation('hslavich/oneloginsaml-bundle', '2.1', 'Usage of security authentication listener is deprecated, option "security.enable_authenticator_manager" should be set to true.');
+    public function create(
+        ContainerBuilder $container,
+        string $id,
+        array $config,
+        string $userProviderId,
+        ?string $defaultEntryPointId
+    ): array {
+        trigger_deprecation(
+            'hslavich/oneloginsaml-bundle',
+            '2.1',
+            'Usage of security authentication listener is deprecated, option "security.enable_authenticator_manager" should be set to true.'
+        );
 
         $authProviderId = $this->createAuthProvider($container, $id, $config, $userProviderId);
 
@@ -85,8 +97,7 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
         if ($config['remember_me']) {
             $container
                 ->getDefinition($listenerId)
-                ->addTag('security.remember_me_aware', ['id' => $id, 'provider' => $userProviderId])
-            ;
+                ->addTag('security.remember_me_aware', ['id' => $id, 'provider' => $userProviderId]);
         }
 
         $entryPointId = $this->createEntryPoint($container, $id, $config);
@@ -104,17 +115,26 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
         return 'saml';
     }
 
-    public function createAuthenticator(ContainerBuilder $container, string $firewallName, array $config, string $userProviderId): string
-    {
+    public function createAuthenticator(
+        ContainerBuilder $container,
+        string $firewallName,
+        array $config,
+        string $userProviderId
+    ): string {
         $authenticatorId = 'security.authenticator.saml.'.$firewallName;
         $authenticator = (new ChildDefinition(SamlAuthenticator::class))
             ->addTag('hslavich.saml_authenticator')
             ->replaceArgument(0, new Reference(HttpUtils::class))
             ->replaceArgument(1, new Reference($userProviderId))
-            ->replaceArgument(3, new Reference($this->createAuthenticationSuccessHandler($container, $firewallName, $config)))
-            ->replaceArgument(4, new Reference($this->createAuthenticationFailureHandler($container, $firewallName, $config)))
-            ->replaceArgument(5, array_intersect_key($config, $this->options))
-        ;
+            ->replaceArgument(
+                3,
+                new Reference($this->createAuthenticationSuccessHandler($container, $firewallName, $config))
+            )
+            ->replaceArgument(
+                4,
+                new Reference($this->createAuthenticationFailureHandler($container, $firewallName, $config))
+            )
+            ->replaceArgument(5, array_intersect_key($config, $this->options));
 
         if ($config['user_factory']) {
             $authenticator->replaceArgument(6, new Reference($config['user_factory']));
@@ -125,18 +145,33 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
         return $authenticatorId;
     }
 
+    public function registerEntryPoint(ContainerBuilder $container, string $id, array $config): ?string
+    {
+        $entryPointId = 'security.authentication.form_entry_point.'.$id;
+        $container
+            ->setDefinition($entryPointId, new ChildDefinition('security.authentication.form_entry_point'))
+            ->addArgument(new Reference(HttpUtils::class))
+            ->addArgument($config['login_path'])
+            ->addArgument($config['use_forward']);
+
+        return $entryPointId;
+    }
+
     protected function createAuthProvider(ContainerBuilder $container, $id, $config, $userProviderId): string
     {
         $providerId = 'security.authentication.provider.saml.'.$id;
+        $container->setParameter('onelogin_auth.auth_map', $config['idp_mapping']);
+
         $definition = $container->setDefinition($providerId, new ChildDefinition(SamlProvider::class))
             ->addTag('hslavich.saml_provider')
-            ->setArguments([
-                new Reference($userProviderId),
+            ->setArguments(
                 [
-                    'persist_user' => $config['persist_user'],
-                ],
-            ])
-        ;
+                    new Reference($userProviderId),
+                    [
+                        'persist_user' => $config['persist_user'],
+                    ],
+                ]
+            );
 
         if ($config['user_factory']) {
             $definition->addMethodCall('setUserFactory', [new Reference($config['user_factory'])]);
@@ -155,8 +190,7 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
             ->replaceArgument(4, $id)
             ->replaceArgument(5, new Reference($this->createAuthenticationSuccessHandler($container, $id, $config)))
             ->replaceArgument(6, new Reference($this->createAuthenticationFailureHandler($container, $id, $config)))
-            ->replaceArgument(7, array_intersect_key($config, $this->options))
-        ;
+            ->replaceArgument(7, array_intersect_key($config, $this->options));
 
         $listenerId .= '.'.$id;
         $container->setDefinition($listenerId, $listener);
@@ -182,12 +216,18 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
         return $entryPointId;
     }
 
-    protected function createAuthenticationSuccessHandler(ContainerBuilder $container, string $id, array $config): string
-    {
+    protected function createAuthenticationSuccessHandler(
+        ContainerBuilder $container,
+        string $id,
+        array $config
+    ): string {
         $successHandlerId = $this->getSuccessHandlerId($id);
         $options = array_intersect_key($config, $this->defaultSuccessHandlerOptions);
 
-        $successHandler = $container->setDefinition($successHandlerId, new ChildDefinition('security.authentication.custom_success_handler'));
+        $successHandler = $container->setDefinition(
+            $successHandlerId,
+            new ChildDefinition('security.authentication.custom_success_handler')
+        );
         $successHandler->replaceArgument(0, new Reference($config['success_handler']));
         $successHandler->replaceArgument(1, $options);
         $successHandler->replaceArgument(2, $id);
@@ -195,17 +235,26 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
         return $successHandlerId;
     }
 
-    protected function createAuthenticationFailureHandler(ContainerBuilder $container, string $id, array $config): string
-    {
+    protected function createAuthenticationFailureHandler(
+        ContainerBuilder $container,
+        string $id,
+        array $config
+    ): string {
         $id = $this->getFailureHandlerId($id);
         $options = array_intersect_key($config, $this->defaultFailureHandlerOptions);
 
         if (isset($config['failure_handler'])) {
-            $failureHandler = $container->setDefinition($id, new ChildDefinition('security.authentication.custom_failure_handler'));
+            $failureHandler = $container->setDefinition(
+                $id,
+                new ChildDefinition('security.authentication.custom_failure_handler')
+            );
             $failureHandler->replaceArgument(0, new Reference($config['failure_handler']));
             $failureHandler->replaceArgument(1, $options);
         } else {
-            $failureHandler = $container->setDefinition($id, new ChildDefinition('security.authentication.failure_handler'));
+            $failureHandler = $container->setDefinition(
+                $id,
+                new ChildDefinition('security.authentication.failure_handler')
+            );
             $failureHandler->addMethodCall('setOptions', [$options]);
         }
 
@@ -221,18 +270,17 @@ class SamlFactory implements SecurityFactoryInterface, AuthenticatorFactoryInter
     {
         return 'security.authentication.failure_handler.'.$id.'.'.str_replace('-', '_', $this->getKey());
     }
-    
+
     private function addResourceOwnersConfiguration(NodeDefinition $node): void
     {
         $builder = $node->children();
         $builder
-        ->arrayNode('idp_mapping')
-        ->isRequired()
-        ->useAttributeAsKey('name')
-        ->prototype('scalar')
-        ->end()
-        ->end()
-        ->end()
-        ;
+            ->arrayNode('idp_mapping')
+            ->isRequired()
+            ->useAttributeAsKey('name')
+            ->prototype('scalar')
+            ->end()
+            ->end()
+            ->end();
     }
 }

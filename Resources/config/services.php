@@ -2,6 +2,17 @@
 
 namespace Symfony\Component\DependencyInjection\Loader\Configurator;
 
+use Hslavich\OneloginSamlBundle\Controller\SamlController;
+use Hslavich\OneloginSamlBundle\EventListener\Security\SamlLogoutListener;
+use Hslavich\OneloginSamlBundle\Security\Authentication\Provider\SamlProvider;
+use Hslavich\OneloginSamlBundle\Security\Authentication\Token\SamlTokenFactory;
+use Hslavich\OneloginSamlBundle\Security\Firewall\SamlListener;
+use Hslavich\OneloginSamlBundle\Security\Http\Authentication\SamlAuthenticationSuccessHandler;
+use Hslavich\OneloginSamlBundle\Security\Http\Authenticator\SamlAuthenticator;
+use Hslavich\OneloginSamlBundle\Security\User\SamlUserProvider;
+use Symfony\Component\DependencyInjection\Argument\AbstractArgument;
+use Symfony\Component\Security\Http\Event\LogoutEvent;
+
 return static function (ContainerConfigurator $container): void {
     $services = $container->services();
 
@@ -16,12 +27,11 @@ return static function (ContainerConfigurator $container): void {
         ->args(['%hslavich_onelogin_saml.settings%'])
     ;
 
-    $services->set(\Hslavich\OneloginSamlBundle\Controller\SamlController::class);
-
-    $services->set(\Hslavich\OneloginSamlBundle\Security\Firewall\SamlListener::class)
+    $services->set(SamlListener::class)
         ->parent(service('security.authentication.listener.abstract'))
         ->abstract()
-        ->call('setOneLoginAuth', [service(\OneLogin\Saml2\Auth::class)])
+        ->call('setAuthMap', ['%onelogin_auth.auth_map%'])
+        ->call('setContainer', [service('service_container')])
     ;
 
     $services->set(\Hslavich\OneloginSamlBundle\Security\Http\Authenticator\SamlAuthenticator::class)
@@ -39,8 +49,9 @@ return static function (ContainerConfigurator $container): void {
         ])
     ;
 
-    $services->set(\Hslavich\OneloginSamlBundle\EventListener\Security\SamlLogoutListener::class)
-        ->tag('kernel.event_listener', ['event' => \Symfony\Component\Security\Http\Event\LogoutEvent::class])
+    $services->set(SamlLogoutListener::class)
+        ->tag('kernel.event_listener', ['event' => LogoutEvent::class])
+        ->call('setContainer', [service('service_container')])
     ;
 
     $deprecatedAliases = [

@@ -33,12 +33,12 @@ class HslavichOneloginSamlExtension extends Extension
     {
         foreach($config['idps'] as $id => $idpConfig) {
             $clientId = sprintf('onelogin_auth.%s', $id);
-            $clientDef = new ChildDefinition('onelogin_auth');
+            $clientDef = new ChildDefinition(\OneLogin\Saml2\Auth::class);
             $authConfig = $config;
             unset($authConfig['idps']);
             $authConfig['idp'] = $idpConfig;
             $clientDef->replaceArgument(0, $authConfig);
-            $clientDef->addTag('onelogin_auth.auth');
+            $clientDef->addTag(\OneLogin\Saml2\Auth::class);
             $container->setDefinition($clientId, $clientDef);
         }
     }
