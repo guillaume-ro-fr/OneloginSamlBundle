@@ -1,29 +1,25 @@
 <?xml version="1.0" encoding="UTF-8"?>
-
-<phpunit colors="true" bootstrap="vendor/autoload.php">
-
-    <testsuites>
-        <testsuite name="Onelogin SAML Test Suite">
-            <directory>./Tests/</directory>
-        </testsuite>
-    </testsuites>
-
-    <filter>
-        <whitelist>
-            <directory>./</directory>
-            <exclude>
-                <directory>./Resources</directory>
-                <directory>./Tests</directory>
-                <directory>./vendor</directory>
-            </exclude>
-        </whitelist>
-    </filter>
-
-    <logging>
-        <log type="coverage-clover" target="build/logs/clover.xml"/>
-    </logging>
-
-    <php>
-        <env name="SYMFONY_DEPRECATIONS_HELPER" value="max[direct]=2" />
-    </php>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" colors="true" bootstrap="vendor/autoload.php" xsi:noNamespaceSchemaLocation="https://schema.phpunit.de/9.3/phpunit.xsd">
+  <coverage>
+    <include>
+      <directory>./</directory>
+    </include>
+    <exclude>
+      <directory>./Resources</directory>
+      <directory>./Tests</directory>
+      <directory>./vendor</directory>
+    </exclude>
+    <report>
+      <clover outputFile="build/logs/clover.xml"/>
+    </report>
+  </coverage>
+  <testsuites>
+    <testsuite name="Onelogin SAML Test Suite">
+      <directory>./Tests/</directory>
+    </testsuite>
+  </testsuites>
+  <logging/>
+  <php>
+    <env name="SYMFONY_DEPRECATIONS_HELPER" value="max[direct]=2"/>
+  </php>
 </phpunit>
