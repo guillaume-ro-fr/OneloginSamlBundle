@@ -81,6 +81,7 @@ class SamlListener extends AbstractAuthenticationListener implements ContainerAw
             $attributes = $oneLoginAuth->getAttributes();
         }
         $attributes['sessionIndex'] = $oneLoginAuth->getSessionIndex();
+        $attributes['idp'] = $idp;
         $token = new SamlToken();
         $token->setAttributes($attributes);
 
